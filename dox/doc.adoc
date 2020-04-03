@@ -1,0 +1,157 @@
+= Periph Guide
+
+== 6 DOF
+
+=== Bus pirate
+* I2C Sequence:
+** Figure out the slave address for reading and writing. You can use *7-bit address search* macro for this. 
++
+[NOTE]
+====
+You can use 
+----
+(0)
+----
+to know the list of available macros
+====
+** To read __n__ bytes starting from a register:
++
+[width="100%"]
+|====================
+| Start | Write Addr | RegNo | Start | Read Addr | r:n | Stop
+|====================
+*** Command
++
+----
+[ 0x<w addr> <reg> [ <r addr> r:<n> ]
+----
+** To write __n__ bytes starting from a register:
++
+[width="100%"]
+|====================
+| Start | Write Addr | RegNo | byte __1__ | byte __2__ | ... | byte __n__ | Stop
+|====================
+*** Command
++
+----
+[ 0x<w addr> <reg> <byte 1> < byte 2> <...> <byte n> ]
+----
+
+==== Connections
+
+SDA, SCL, GND, 3.3V
+
+==== Commands
+* Mode select: I2C
+* Speed: ~400KHz
+* Enable power supply
+* Figure out the slave address for reading and writing
+** Addresses:
+*** Read: 0xd1
+*** Write: 0xd0
+* Read the WHO_AM_I register(0x75):
++
+----
+[ 0xd0 0x75 [ 0xd1 r:1 ]
+----
+** Expected response: 0x68
+* Wakeup the controller to read sensor value by writing 0 into register 0x6b
++
+----
+[ 0xd0 0x6b 0x00 ]
+----
+* Read the accelerometer sensor values using the read sequence to read 6 bytes(2 bytes per axis) from 0x3b register
++
+----
+[ 0xd0 0x3b [ 0xd1 r:6 ]
+----
+* Read the gyro sensor values using the read sequence to read 6 bytes(2 bytes per axis) from 0x43 register
++
+----
+[ 0xd0 0x43 [ 0xd1 r:6 ]
+----
+
+=== Some links
+
+https://www.invensense.com/products/motion-tracking/6-axis/mpu-6050/
+
+https://howtomechatronics.com/tutorials/arduino/arduino-and-mpu6050-accelerometer-and-gyroscope-tutorial/
+
+http://www.i2cdevlib.com/devices/mpu6050#registers
+
+http://www.i2cdevlib.com/tools/analyzer/5
+
+https://www.youtube.com/watch?v=SeCtWOr-pwU
+
+== ADXL
+
+=== Bus pirate
+
+==== Connections
+
+Buspirate-ADXL
+
+SDA, SCL, GND, 3.3V-VIN
+
+==== Commands
+* Mode select: I2C
+* Speed: ~400KHz
+* Enable power supply
+* Figure out the slave address for reading and writing
+** Addresses:
+*** Read: 0xA7
+*** Write: 0xA6
+* Read the DEVID register(0x00):
++
+----
+[ 0xa6 0x00 [ 0xa7 r:1 ]
+----
+** Expected response: 0xe5
+* Set the sensor to read mode by setting Measure Bit in POWER_CTL register 0x2d
+** Read the existing value using the read sequence 
++
+----
+[ 0xa6 0x2d [ 0xa7 r:1 ]
+----
+** Write into the register the value = (read value | 0x80)
++
+----
+[ 0xa6 0x2d <value | 0x08> ]
+----
++
+[WARNING]
+====
+If you dont do the above 2 step process but instead just do:
+
+----
+[ 0xa6 0x2d 0x08 ]
+----
+
+You'll basically put all the config of this register to factory defaults
+====
+
+* Read the accelerometer sensor values using the read sequence to read 6 bytes(2 bytes per axis) from 0x32 register
++
+----
+[ 0xa6 0x32 [ 0xa7 r:6 ]
+----
+
+=== Some links
+
+https://www.analog.com/media/en/technical-documentation/data-sheets/ADXL343.pdf
+
+https://learn.adafruit.com/adxl343-breakout-learning-guide
+
+== BLE
+
+=== Bus pirate
+
+Use both
+
+==== Connections
+
+Buspirate-BLE
+
+
+==== Commands
+* Mode select: SPI

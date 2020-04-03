@@ -1,0 +1,3 @@
+= ReadMe
+ 
+Go to doc folder and read the 'doc.adoc'
