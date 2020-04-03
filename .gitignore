@@ -1,0 +1,9 @@
+.metadata/
+RemoteSystemsTempFiles
+bledblk/
+nledblk/
+nrtos/
+nuart/
+nwortos/
+*/.settings/
+*/Debug/
