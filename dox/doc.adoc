@@ -1,8 +1,10 @@
-= Periph Guide
+= Doc
 
-== 6 DOF
+== Periph Guide
 
-=== Bus pirate
+=== 6 DOF
+
+==== Bus pirate
 * I2C Sequence:
 ** Figure out the slave address for reading and writing. You can use *7-bit address search* macro for this. 
 +
@@ -37,11 +39,11 @@ to know the list of available macros
 [ 0x<w addr> <reg> <byte 1> < byte 2> <...> <byte n> ]
 ----
 
-==== Connections
+===== Connections
 
 SDA, SCL, GND, 3.3V
 
-==== Commands
+===== Commands
 * Mode select: I2C
 * Speed: ~400KHz
 * Enable power supply
@@ -71,7 +73,7 @@ SDA, SCL, GND, 3.3V
 [ 0xd0 0x43 [ 0xd1 r:6 ]
 ----
 
-=== Some links
+==== Some links
 
 https://www.invensense.com/products/motion-tracking/6-axis/mpu-6050/
 
@@ -83,17 +85,17 @@ http://www.i2cdevlib.com/tools/analyzer/5
 
 https://www.youtube.com/watch?v=SeCtWOr-pwU
 
-== ADXL
+=== ADXL
 
-=== Bus pirate
+==== Bus pirate
 
-==== Connections
+===== Connections
 
 Buspirate-ADXL
 
 SDA, SCL, GND, 3.3V-VIN
 
-==== Commands
+===== Commands
 * Mode select: I2C
 * Speed: ~400KHz
 * Enable power supply
@@ -136,22 +138,51 @@ You'll basically put all the config of this register to factory defaults
 [ 0xa6 0x32 [ 0xa7 r:6 ]
 ----
 
-=== Some links
+==== Some links
 
 https://www.analog.com/media/en/technical-documentation/data-sheets/ADXL343.pdf
 
 https://learn.adafruit.com/adxl343-breakout-learning-guide
 
-== BLE
+=== BLE
 
-=== Bus pirate
+==== Bus pirate
 
 Use both
 
-==== Connections
+===== Connections
 
 Buspirate-BLE
 
 
-==== Commands
+===== Commands
 * Mode select: SPI
+
+== Bus Pirate Guide
+
+=== SOP
+
+* Connect bus pirate to PC
+* figure out which virtual comm port has detected bus pirate
+** on linux
++
+----
+sudo dmesg
+----
+* Open the USB port determined in last step using the following settings in your serial terminal program:
+** Baud Rate: 115200
+** Parity: None
+** Stop bit: 1
+** Data bits: 8
+** Hardware Flow control: None
+* Press enter you must see a prompt
+* Enter *?* to get help
+* Follow help to do your thing
+
+=== UART printing
+
+* from initial menu choose uart mode
+* choose all comm parameters
+* for our dev boards, use *Normal mode* for hardware configuration(not *open drain*)
+* make sure you cross couple RX-TX to dev board and dont forget to have common GND
+* use macro *live monitor* to see the uart msgs
