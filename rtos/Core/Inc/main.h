@@ -66,6 +66,8 @@ void Error_Handler(void);
 #define PH0_OSC_IN_GPIO_Port GPIOH
 #define PH1_OSC_OUT_Pin GPIO_PIN_1
 #define PH1_OSC_OUT_GPIO_Port GPIOH
+#define blueButton_Pin GPIO_PIN_0
+#define blueButton_GPIO_Port GPIOA
 #define blueLed_Pin GPIO_PIN_8
 #define blueLed_GPIO_Port GPIOC
 #define greenLed_Pin GPIO_PIN_9

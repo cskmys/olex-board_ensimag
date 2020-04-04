@@ -46,21 +46,21 @@
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
 		.name = "defaultTask",
-		.priority = (osPriority_t) osPriorityNormal,
+		.priority = (osPriority_t) osPriorityLow,
 		.stack_size = 128 * 4
 };
 /* Definitions for blueLedTask */
 osThreadId_t blueLedTaskHandle;
 const osThreadAttr_t blueLedTask_attributes = {
 		.name = "blueLedTask",
-		.priority = (osPriority_t) osPriorityLow,
+		.priority = (osPriority_t) osPriorityBelowNormal,
 		.stack_size = 128 * 4
 };
-/* Definitions for greenLedTask */
-osThreadId_t greenLedTaskHandle;
-const osThreadAttr_t greenLedTask_attributes = {
-		.name = "greenLedTask",
-		.priority = (osPriority_t) osPriorityLow,
+/* Definitions for pushButtonTask */
+osThreadId_t pushButtonTaskHandle;
+const osThreadAttr_t pushButtonTask_attributes = {
+		.name = "pushButtonTask",
+		.priority = (osPriority_t) osPriorityNormal,
 		.stack_size = 128 * 4
 };
 /* USER CODE BEGIN PV */
@@ -72,7 +72,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 void StartDefaultTask(void *argument);
 void StartBlueLedTask(void *argument);
-void StartGreenLedTask(void *argument);
+void StartPushButtonTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -141,8 +141,8 @@ int main(void)
 	/* creation of blueLedTask */
 	blueLedTaskHandle = osThreadNew(StartBlueLedTask, NULL, &blueLedTask_attributes);
 
-	/* creation of greenLedTask */
-	greenLedTaskHandle = osThreadNew(StartGreenLedTask, NULL, &greenLedTask_attributes);
+	/* creation of pushButtonTask */
+	pushButtonTaskHandle = osThreadNew(StartPushButtonTask, NULL, &pushButtonTask_attributes);
 
 	/* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
@@ -221,6 +221,12 @@ static void MX_GPIO_Init(void)
 	/*Configure GPIO pin Output Level */
 	HAL_GPIO_WritePin(GPIOC, blueLed_Pin|greenLed_Pin, GPIO_PIN_RESET);
 
+	/*Configure GPIO pin : blueButton_Pin */
+	GPIO_InitStruct.Pin = blueButton_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(blueButton_GPIO_Port, &GPIO_InitStruct);
+
 	/*Configure GPIO pins : blueLed_Pin greenLed_Pin */
 	GPIO_InitStruct.Pin = blueLed_Pin|greenLed_Pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -271,23 +277,23 @@ void StartBlueLedTask(void *argument)
 	/* USER CODE END StartBlueLedTask */
 }
 
-/* USER CODE BEGIN Header_StartGreenLedTask */
+/* USER CODE BEGIN Header_StartPushButtonTask */
 /**
- * @brief Function implementing the greenLedTask thread.
+ * @brief Function implementing the pushButtonTask thread.
  * @param argument: Not used
  * @retval None
  */
-/* USER CODE END Header_StartGreenLedTask */
-void StartGreenLedTask(void *argument)
+/* USER CODE END Header_StartPushButtonTask */
+void StartPushButtonTask(void *argument)
 {
-	/* USER CODE BEGIN StartGreenLedTask */
+	/* USER CODE BEGIN StartPushButtonTask */
 	/* Infinite loop */
 	for(;;)
 	{
-		HAL_GPIO_TogglePin(greenLed_GPIO_Port, greenLed_Pin);
-		osDelay(500);
+		HAL_GPIO_WritePin(greenLed_GPIO_Port, greenLed_Pin, HAL_GPIO_ReadPin(blueButton_GPIO_Port, blueButton_Pin));
+		osDelay(100);
 	}
-	/* USER CODE END StartGreenLedTask */
+	/* USER CODE END StartPushButtonTask */
 }
 
 /**
