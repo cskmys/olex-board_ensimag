@@ -186,3 +186,17 @@ sudo dmesg
 * for our dev boards, use *Normal mode* for hardware configuration(not *open drain*)
 * make sure you cross couple RX-TX to dev board and dont forget to have common GND
 * use macro *live monitor* to see the uart msgs
+
+=== SPI echo
+
+Not possible coz if you connect 2 bus pirates then voltage drops, all output obtained will be junk.
+So, only SPI print test can be done
+* from initial menu choose SPI mode
+* choose highest possible speed
+* for our dev boards, use *Normal mode* for hardware configuration(not *open drain*)
+* use macro *sniff all traffic* to see the spi msgs in ascii value
+[NOTE]
+====
+Keep test string as small as possible.
+If you make test string big, then you may see that bus pirate will not be able to keep up.
+====

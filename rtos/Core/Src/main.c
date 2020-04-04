@@ -28,6 +28,7 @@
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
+typedef StaticTask_t osStaticThreadDef_t;
 /* USER CODE BEGIN PTD */
 
 /* USER CODE END PTD */
@@ -38,39 +39,74 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define UART_STR "test\n"
+#define UART_STR "utest\n"
+#define SPI_STR "test\n"
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+SPI_HandleTypeDef hspi1;
+
 UART_HandleTypeDef huart1;
 
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
+uint32_t defaultTaskBuffer[ 128 ];
+osStaticThreadDef_t defaultTaskControlBlock;
 const osThreadAttr_t defaultTask_attributes = {
 		.name = "defaultTask",
+		.stack_mem = &defaultTaskBuffer[0],
+		.stack_size = sizeof(defaultTaskBuffer),
+		.cb_mem = &defaultTaskControlBlock,
+		.cb_size = sizeof(defaultTaskControlBlock),
 		.priority = (osPriority_t) osPriorityLow,
-		.stack_size = 128 * 4
 };
 /* Definitions for blueLedTask */
 osThreadId_t blueLedTaskHandle;
+uint32_t blueLedTaskBuffer[ 128 ];
+osStaticThreadDef_t blueLedTaskControlBlock;
 const osThreadAttr_t blueLedTask_attributes = {
 		.name = "blueLedTask",
+		.stack_mem = &blueLedTaskBuffer[0],
+		.stack_size = sizeof(blueLedTaskBuffer),
+		.cb_mem = &blueLedTaskControlBlock,
+		.cb_size = sizeof(blueLedTaskControlBlock),
 		.priority = (osPriority_t) osPriorityNormal,
-		.stack_size = 128 * 4
 };
 /* Definitions for pushButtonTask */
 osThreadId_t pushButtonTaskHandle;
+uint32_t pushButtonTaskBuffer[ 128 ];
+osStaticThreadDef_t pushButtonTaskControlBlock;
 const osThreadAttr_t pushButtonTask_attributes = {
 		.name = "pushButtonTask",
+		.stack_mem = &pushButtonTaskBuffer[0],
+		.stack_size = sizeof(pushButtonTaskBuffer),
+		.cb_mem = &pushButtonTaskControlBlock,
+		.cb_size = sizeof(pushButtonTaskControlBlock),
 		.priority = (osPriority_t) osPriorityAboveNormal,
-		.stack_size = 128 * 4
 };
 /* Definitions for uartTask */
 osThreadId_t uartTaskHandle;
+uint32_t uartTaskBuffer[ 128 ];
+osStaticThreadDef_t uartTaskControlBlock;
 const osThreadAttr_t uartTask_attributes = {
 		.name = "uartTask",
+		.stack_mem = &uartTaskBuffer[0],
+		.stack_size = sizeof(uartTaskBuffer),
+		.cb_mem = &uartTaskControlBlock,
+		.cb_size = sizeof(uartTaskControlBlock),
 		.priority = (osPriority_t) osPriorityBelowNormal,
-		.stack_size = 128 * 4
+};
+/* Definitions for spiTask */
+osThreadId_t spiTaskHandle;
+uint32_t spiTaskBuffer[ 128 ];
+osStaticThreadDef_t spiTaskControlBlock;
+const osThreadAttr_t spiTask_attributes = {
+		.name = "spiTask",
+		.stack_mem = &spiTaskBuffer[0],
+		.stack_size = sizeof(spiTaskBuffer),
+		.cb_mem = &spiTaskControlBlock,
+		.cb_size = sizeof(spiTaskControlBlock),
+		.priority = (osPriority_t) osPriorityHigh,
 };
 /* USER CODE BEGIN PV */
 
@@ -80,10 +116,12 @@ const osThreadAttr_t uartTask_attributes = {
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_SPI1_Init(void);
 void StartDefaultTask(void *argument);
 void StartBlueLedTask(void *argument);
 void StartPushButtonTask(void *argument);
 void StartUartTask(void *argument);
+void StartSpiTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -123,6 +161,7 @@ int main(void)
 	/* Initialize all configured peripherals */
 	MX_GPIO_Init();
 	MX_USART1_UART_Init();
+	MX_SPI1_Init();
 	/* USER CODE BEGIN 2 */
 
 	/* USER CODE END 2 */
@@ -158,6 +197,9 @@ int main(void)
 
 	/* creation of uartTask */
 	uartTaskHandle = osThreadNew(StartUartTask, NULL, &uartTask_attributes);
+
+	/* creation of spiTask */
+	spiTaskHandle = osThreadNew(StartSpiTask, NULL, &spiTask_attributes);
 
 	/* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
@@ -216,6 +258,44 @@ void SystemClock_Config(void)
 	{
 		Error_Handler();
 	}
+}
+
+/**
+ * @brief SPI1 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_SPI1_Init(void)
+{
+
+	/* USER CODE BEGIN SPI1_Init 0 */
+
+	/* USER CODE END SPI1_Init 0 */
+
+	/* USER CODE BEGIN SPI1_Init 1 */
+
+	/* USER CODE END SPI1_Init 1 */
+	/* SPI1 parameter configuration*/
+	hspi1.Instance = SPI1;
+	hspi1.Init.Mode = SPI_MODE_MASTER;
+	hspi1.Init.Direction = SPI_DIRECTION_2LINES;
+	hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
+	hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
+	hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+	hspi1.Init.NSS = SPI_NSS_HARD_OUTPUT;
+	hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+	hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
+	hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
+	hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+	hspi1.Init.CRCPolynomial = 10;
+	if (HAL_SPI_Init(&hspi1) != HAL_OK)
+	{
+		Error_Handler();
+	}
+	/* USER CODE BEGIN SPI1_Init 2 */
+
+	/* USER CODE END SPI1_Init 2 */
+
 }
 
 /**
@@ -361,6 +441,25 @@ void StartUartTask(void *argument)
 		osDelay(1000);
 	}
 	/* USER CODE END StartUartTask */
+}
+
+/* USER CODE BEGIN Header_StartSpiTask */
+/**
+ * @brief Function implementing the spiTask thread.
+ * @param argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartSpiTask */
+void StartSpiTask(void *argument)
+{
+	/* USER CODE BEGIN StartSpiTask */
+	/* Infinite loop */
+	for(;;)
+	{
+		HAL_SPI_Transmit(&hspi1, SPI_STR, sizeof(SPI_STR), 100);
+		osDelay(1000);
+	}
+	/* USER CODE END StartSpiTask */
 }
 
 /**
