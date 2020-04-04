@@ -72,6 +72,10 @@ void Error_Handler(void);
 #define blueLed_GPIO_Port GPIOC
 #define greenLed_Pin GPIO_PIN_9
 #define greenLed_GPIO_Port GPIOC
+#define dbgUartTx_Pin GPIO_PIN_9
+#define dbgUartTx_GPIO_Port GPIOA
+#define dbgUartRx_Pin GPIO_PIN_10
+#define dbgUartRx_GPIO_Port GPIOA
 #define SWDIO_Pin GPIO_PIN_13
 #define SWDIO_GPIO_Port GPIOA
 #define SWCLK_Pin GPIO_PIN_14

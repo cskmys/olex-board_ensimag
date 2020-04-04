@@ -38,10 +38,12 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+#define UART_STR "test\n"
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+UART_HandleTypeDef huart1;
+
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
@@ -53,14 +55,21 @@ const osThreadAttr_t defaultTask_attributes = {
 osThreadId_t blueLedTaskHandle;
 const osThreadAttr_t blueLedTask_attributes = {
 		.name = "blueLedTask",
-		.priority = (osPriority_t) osPriorityBelowNormal,
+		.priority = (osPriority_t) osPriorityNormal,
 		.stack_size = 128 * 4
 };
 /* Definitions for pushButtonTask */
 osThreadId_t pushButtonTaskHandle;
 const osThreadAttr_t pushButtonTask_attributes = {
 		.name = "pushButtonTask",
-		.priority = (osPriority_t) osPriorityNormal,
+		.priority = (osPriority_t) osPriorityAboveNormal,
+		.stack_size = 128 * 4
+};
+/* Definitions for uartTask */
+osThreadId_t uartTaskHandle;
+const osThreadAttr_t uartTask_attributes = {
+		.name = "uartTask",
+		.priority = (osPriority_t) osPriorityBelowNormal,
 		.stack_size = 128 * 4
 };
 /* USER CODE BEGIN PV */
@@ -70,9 +79,11 @@ const osThreadAttr_t pushButtonTask_attributes = {
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_USART1_UART_Init(void);
 void StartDefaultTask(void *argument);
 void StartBlueLedTask(void *argument);
 void StartPushButtonTask(void *argument);
+void StartUartTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -111,6 +122,7 @@ int main(void)
 
 	/* Initialize all configured peripherals */
 	MX_GPIO_Init();
+	MX_USART1_UART_Init();
 	/* USER CODE BEGIN 2 */
 
 	/* USER CODE END 2 */
@@ -143,6 +155,9 @@ int main(void)
 
 	/* creation of pushButtonTask */
 	pushButtonTaskHandle = osThreadNew(StartPushButtonTask, NULL, &pushButtonTask_attributes);
+
+	/* creation of uartTask */
+	uartTaskHandle = osThreadNew(StartUartTask, NULL, &uartTask_attributes);
 
 	/* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
@@ -201,6 +216,39 @@ void SystemClock_Config(void)
 	{
 		Error_Handler();
 	}
+}
+
+/**
+ * @brief USART1 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_USART1_UART_Init(void)
+{
+
+	/* USER CODE BEGIN USART1_Init 0 */
+
+	/* USER CODE END USART1_Init 0 */
+
+	/* USER CODE BEGIN USART1_Init 1 */
+
+	/* USER CODE END USART1_Init 1 */
+	huart1.Instance = USART1;
+	huart1.Init.BaudRate = 115200;
+	huart1.Init.WordLength = UART_WORDLENGTH_8B;
+	huart1.Init.StopBits = UART_STOPBITS_1;
+	huart1.Init.Parity = UART_PARITY_NONE;
+	huart1.Init.Mode = UART_MODE_TX_RX;
+	huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+	huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+	if (HAL_UART_Init(&huart1) != HAL_OK)
+	{
+		Error_Handler();
+	}
+	/* USER CODE BEGIN USART1_Init 2 */
+
+	/* USER CODE END USART1_Init 2 */
+
 }
 
 /**
@@ -296,6 +344,25 @@ void StartPushButtonTask(void *argument)
 	/* USER CODE END StartPushButtonTask */
 }
 
+/* USER CODE BEGIN Header_StartUartTask */
+/**
+ * @brief Function implementing the uartTask thread.
+ * @param argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartUartTask */
+void StartUartTask(void *argument)
+{
+	/* USER CODE BEGIN StartUartTask */
+	/* Infinite loop */
+	for(;;)
+	{
+		HAL_UART_Transmit(&huart1, UART_STR, sizeof(UART_STR), 100);
+		osDelay(1000);
+	}
+	/* USER CODE END StartUartTask */
+}
+
 /**
  * @brief  Period elapsed callback in non blocking mode
  * @note   This function is called  when TIM2 interrupt took place, inside
@@ -325,7 +392,10 @@ void Error_Handler(void)
 {
 	/* USER CODE BEGIN Error_Handler_Debug */
 	/* User can add his own implementation to report the HAL error return state */
-
+	HAL_GPIO_WritePin(greenLed_GPIO_Port, greenLed_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(blueLed_GPIO_Port, blueLed_Pin, GPIO_PIN_SET);
+	HAL_UART_Transmit(&huart1, "fuck", sizeof("fuck"), 100);
+	while(1);
 	/* USER CODE END Error_Handler_Debug */
 }
 
