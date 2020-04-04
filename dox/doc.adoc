@@ -158,9 +158,9 @@ Buspirate-BLE
 ===== Commands
 * Mode select: SPI
 
-== Bus Pirate Guide
+== Board bring up
 
-=== SOP
+=== Bus Pirate SOP
 
 * Connect bus pirate to PC
 * figure out which virtual comm port has detected bus pirate
@@ -200,3 +200,8 @@ So, only SPI print test can be done
 Keep test string as small as possible.
 If you make test string big, then you may see that bus pirate will not be able to keep up.
 ====
+
+=== I2C echo
+
+Not possible to independently test it, since buspirate can't act as independent slave.
+Hence, test executed with 6-dof sensor who am I sequence(details can be found in *Periph Guide* section).
