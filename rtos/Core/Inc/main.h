@@ -68,6 +68,14 @@ void Error_Handler(void);
 #define PH1_OSC_OUT_GPIO_Port GPIOH
 #define blueButton_Pin GPIO_PIN_0
 #define blueButton_GPIO_Port GPIOA
+#define spiCS_Pin GPIO_PIN_4
+#define spiCS_GPIO_Port GPIOA
+#define spiClk_Pin GPIO_PIN_5
+#define spiClk_GPIO_Port GPIOA
+#define spiMiso_Pin GPIO_PIN_6
+#define spiMiso_GPIO_Port GPIOA
+#define spiMosi_Pin GPIO_PIN_7
+#define spiMosi_GPIO_Port GPIOA
 #define blueLed_Pin GPIO_PIN_8
 #define blueLed_GPIO_Port GPIOC
 #define greenLed_Pin GPIO_PIN_9
@@ -82,6 +90,10 @@ void Error_Handler(void);
 #define SWCLK_GPIO_Port GPIOA
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
+#define i2cClk_Pin GPIO_PIN_6
+#define i2cClk_GPIO_Port GPIOB
+#define i2cDat_Pin GPIO_PIN_7
+#define i2cDat_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
