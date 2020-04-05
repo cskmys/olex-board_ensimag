@@ -37,7 +37,6 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define SPI_STR "test\n"
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -100,8 +99,10 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		HAL_SPI_Transmit(&hspi1, SPI_STR, sizeof(SPI_STR), 100);
-		HAL_Delay(1000);
+		uint8_t spiTx[5] = {'t', 'e', 's', 't', '\n'};
+		uint8_t spiRx[5] = {0};
+		HAL_SPI_TransmitReceive(&hspi1, spiTx, spiRx, sizeof(spiTx), 100);
+		HAL_Delay(5000);
 	}
   /* USER CODE END 3 */
 }
@@ -169,7 +170,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_HARD_OUTPUT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;

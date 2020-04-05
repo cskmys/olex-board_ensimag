@@ -155,8 +155,30 @@ Use both
 Buspirate-BLE
 
 
-===== Commands
+===== Sequence
 * Mode select: SPI
+* choose modest speed like 250KHz
+* for our dev boards, use *Normal mode* for hardware configuration(not *open drain*)
+* Use the packet generator option in packet gen py script to generate your command
+* Use the response interprter option in packet gen py script to interpret the response
+** If response is invalid, retry the command
+** else, do as the response output says
+
+===== Commands
+https://learn.adafruit.com/introducing-the-adafruit-bluefruit-spi-breakout/at-commands
+
+[WARNING]
+====
+We will not do any mode switch. BLE will always stay in Command Mode.
+To send/read characters on BLE as UART, we use the BLE UART service commands. 
+====
+
+[NOTE]
+====
+BLE as UART, we use the BLE UART service commands works with any bluetooth terminal app.
+Not restricted to adafruit's app.
+====
+
 
 == Board bring up
 
@@ -191,10 +213,11 @@ sudo dmesg
 
 Not possible coz if you connect 2 bus pirates then voltage drops, all output obtained will be junk.
 So, only SPI print test can be done
+
 * from initial menu choose SPI mode
-* choose highest possible speed
+* choose modest speed like 250KHz
 * for our dev boards, use *Normal mode* for hardware configuration(not *open drain*)
-* use macro *sniff all traffic* to see the spi msgs in ascii value
+* use macro *sniff CS low* to see the spi msgs in ascii value
 [NOTE]
 ====
 Keep test string as small as possible.
@@ -205,3 +228,7 @@ If you make test string big, then you may see that bus pirate will not be able t
 
 Not possible to independently test it, since buspirate can't act as independent slave.
 Hence, test executed with 6-dof sensor who am I sequence(details can be found in *Periph Guide* section).
+
+=== BLE AT Command
+
+Whatever was typed on buspirate is now done using code. So be sure to read BLE subsection in *Periph Guide* section.
