@@ -1,3 +1,5 @@
+import sys
+
 MAX_PKT_SIZ = 20
 DELIM_WORD = 'READ:'
 RESP_CODE = 0x20
@@ -11,26 +13,55 @@ def cnt_nb_cmd_char(cmd_str):
     return cnt
 
 
-def cmd_to_str(cmd_name):
-    cmd_name_asccii_str_lst = [str(hex(ord(c))) for c in cmd_name]
-    cmd_str = '{ 0x10, 0x00, 0x0a, '
-    nb_var_bytes = len(cmd_name)
-    cmd_str += str(hex(nb_var_bytes + 1)) + ', '  # + 1 for \n at end
+def build_cur_frame(payload_bytes, last_frame, is_cmd):
+    nb_var_bytes = len(payload_bytes)
+    cmd_name_asccii_str_lst = [str(hex(ord(c))) for c in payload_bytes]
+    cmd_str = '{ 0x10, '
+    if is_cmd is True:
+        cmd_str += '0x00, '
+    else:
+        cmd_str += '0x01, '
+    cmd_str += '0x0a, '
+    if last_frame is True:
+        cmd_str += str(hex(nb_var_bytes + 1)) + ', '  # + 1 for \n at end
+    else:
+        if is_cmd is True:
+            cmd_str += str(hex(nb_var_bytes | 0x80)) + ', '  # MSB = 1 to indicate more frames incoming
+        else:
+            cmd_str += str(hex(nb_var_bytes)) + ', '
     nb_fix_bytes = cnt_nb_cmd_char(cmd_str)
     for s in cmd_name_asccii_str_lst:
         cmd_str += s + ', '
-    cmd_str += '0x0a, '
-    nb_fix_bytes += 1
+    if last_frame is True:
+        cmd_str += '0x0a, '
+        nb_fix_bytes += 1
     nb_cmd_char = cnt_nb_cmd_char(cmd_str)
     if nb_cmd_char > MAX_PKT_SIZ:
-        print(nb_cmd_char)
-        print('yet to be implemented')
+        print('wrong arg passed to this function')
         exit(0)
     elif nb_cmd_char < MAX_PKT_SIZ:
-        # cmd_str += 'r:' + str(MAX_PKT_SIZ-(nb_fix_bytes + nb_var_bytes)) + ' '
-        for i in range(MAX_PKT_SIZ-(nb_fix_bytes + nb_var_bytes)):
+        for i in range(MAX_PKT_SIZ - (nb_fix_bytes + nb_var_bytes)):
             cmd_str += '0xff, '
     cmd_str += '] '
+    return cmd_str
+
+
+def cmd_to_str(cmd_name, is_cmd):
+    nb_fix_bytes = 5  # cmd (1) + cmd code(2) + nbBytesInCurPayload(1) + ... + '\n' (1)
+    nb_var_bytes = len(cmd_name)
+    cmd_str = ''
+    cmd_nam_lst = list()
+    if nb_fix_bytes + nb_var_bytes > MAX_PKT_SIZ:
+        split_val = MAX_PKT_SIZ - (nb_fix_bytes - 1)
+        cmd_nam_lst = [cmd_name[i:i+split_val] for i in range(0, len(cmd_name), split_val)]
+        for i, cmd_nam in enumerate(cmd_nam_lst):
+            if i == len(cmd_nam_lst) - 1:
+                cmd_str += build_cur_frame(cmd_nam, True, is_cmd)
+            else:
+                cmd_str += build_cur_frame(cmd_nam, False, is_cmd) + '\n'
+    else:
+        cmd_str += build_cur_frame(cmd_name, True, is_cmd)
+    cmd_str += '\n'
     return cmd_str
 
 
@@ -140,19 +171,28 @@ def test():
     print(resp_str)
 
 
-import sys
 def main():
-    print('0:cmd\n1:resp\nelse:test')
-    val = input()
+    val = input('0:test\n1:resp\nelse:req\n')
     if val == '0':
-        cmd_str = input()
-        print(cmd_to_str(cmd_str))
+        test()
     elif val == '1':
         print('paste your string n use ctrl-D to terminate')
         resp_str = sys.stdin.read()
         print(resp_to_str(resp_str))
     else:
-        test()
+        is_cmd = input('0:Cmd\nelse:Dat\n')
+        if is_cmd == '0':
+            cmd_str = input()
+            pkt_str = cmd_to_str(cmd_str, True)
+        else:
+            tx_rx_cmd = input('0:rx\nelse:tx\n')
+            if tx_rx_cmd == '0':
+                pkt_str = '{0x10, 0x02, 0x0a, 0x00, 0xff, 0xff, 0xff, 0xff,' \
+                          ' 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,]'
+            else:
+                cmd_str = input()
+                pkt_str = cmd_to_str(cmd_str, False)
+        print(pkt_str)
 
 
 if __name__ == '__main__':
