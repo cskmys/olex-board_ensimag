@@ -97,16 +97,16 @@ const osThreadAttr_t i2cTask_attributes = {
 		.cb_size = sizeof(i2cTaskControlBlock),
 		.priority = (osPriority_t) osPriorityBelowNormal,
 };
-/* Definitions for spiTask */
-osThreadId_t spiTaskHandle;
-uint32_t spiTaskBuffer[ 128 ];
-osStaticThreadDef_t spiTaskControlBlock;
-const osThreadAttr_t spiTask_attributes = {
-		.name = "spiTask",
-		.stack_mem = &spiTaskBuffer[0],
-		.stack_size = sizeof(spiTaskBuffer),
-		.cb_mem = &spiTaskControlBlock,
-		.cb_size = sizeof(spiTaskControlBlock),
+/* Definitions for bleTask */
+osThreadId_t bleTaskHandle;
+uint32_t bleTaskBuffer[ 128 ];
+osStaticThreadDef_t bleTaskControlBlock;
+const osThreadAttr_t bleTask_attributes = {
+		.name = "bleTask",
+		.stack_mem = &bleTaskBuffer[0],
+		.stack_size = sizeof(bleTaskBuffer),
+		.cb_mem = &bleTaskControlBlock,
+		.cb_size = sizeof(bleTaskControlBlock),
 		.priority = (osPriority_t) osPriorityHigh,
 };
 /* USER CODE BEGIN PV */
@@ -123,7 +123,7 @@ void StartDefaultTask(void *argument);
 void StartBlueLedTask(void *argument);
 void StartPushButtonTask(void *argument);
 void StartI2cTask(void *argument);
-void StartSpiTask(void *argument);
+void StartBleTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -201,8 +201,8 @@ int main(void)
 	/* creation of i2cTask */
 	i2cTaskHandle = osThreadNew(StartI2cTask, NULL, &i2cTask_attributes);
 
-	/* creation of spiTask */
-	spiTaskHandle = osThreadNew(StartSpiTask, NULL, &spiTask_attributes);
+	/* creation of bleTask */
+	bleTaskHandle = osThreadNew(StartBleTask, NULL, &bleTask_attributes);
 
 	/* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
@@ -476,33 +476,58 @@ void StartI2cTask(void *argument)
 	{
 		uint8_t whoAmI = 0;
 		HAL_I2C_Mem_Read(&hi2c1, I2C_SLAVE_ADD, 0x75, 1, &whoAmI, sizeof(whoAmI), 100);
-		char whoAmIStr[4] = {0, 0, 0, 0};
-		snprintf(whoAmIStr, sizeof(whoAmIStr), "%x\n", whoAmI);
-		HAL_UART_Transmit(&huart1, whoAmIStr, sizeof(whoAmIStr), 100);
-		osDelay(1000);
+		if( whoAmI != 0x68 ){
+			char whoAmIStr[4] = {0, 0, 0, 0};
+			snprintf(whoAmIStr, sizeof(whoAmIStr), "%x\n", whoAmI);
+			HAL_UART_Transmit(&huart1, whoAmIStr, sizeof(whoAmIStr), 100);
+		}
+		osDelay(250);
 	}
 	/* USER CODE END StartI2cTask */
 }
 
-/* USER CODE BEGIN Header_StartSpiTask */
+/* USER CODE BEGIN Header_StartBleTask */
 /**
- * @brief Function implementing the spiTask thread.
+ * @brief Function implementing the bleTask thread.
  * @param argument: Not used
  * @retval None
  */
-/* USER CODE END Header_StartSpiTask */
-void StartSpiTask(void *argument)
+/* USER CODE END Header_StartBleTask */
+void StartBleTask(void *argument)
 {
-	/* USER CODE BEGIN StartSpiTask */
+	/* USER CODE BEGIN StartBleTask */
+	uint8_t pTxData[20] = { 0x10, 0x00, 0x0a, 0x4, 0x41, 0x54, 0x5a, 0x0a, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+	uint8_t eRxResp[20] = { 0x20, 0x00, 0x0a, 0x4, 0x4f, 0x4b, 0x5a, 0x0d, 0x0a, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+	uint8_t pRxData[20] = {0};
+	HAL_SPI_Init(&hspi1);
+	HAL_SPI_TransmitReceive(&hspi1, pTxData, pRxData, sizeof(pTxData), 100);
+	HAL_SPI_DeInit(&hspi1);
+	if( memcmp(eRxResp, pRxData, sizeof(eRxResp)) != 0 ){
+		HAL_UART_Transmit(&huart1, pRxData, sizeof(pRxData), 100);
+	}
+	osDelay(1000);
 	/* Infinite loop */
 	for(;;)
 	{
-		uint8_t spiTx[5] = {'t', 'e', 's', 't', '\n'};
-		uint8_t spiRx[5] = {0};
-		HAL_SPI_TransmitReceive(&hspi1, spiTx, spiRx, sizeof(spiTx), 100);
-		osDelay(5000);
+		uint8_t pTxData[3][20] = {
+				{ 0x10, 0x01, 0x0a, 0x10, 0x54, 0x68, 0x65, 0x20, 0x71, 0x75, 0x69, 0x63, 0x6b, 0x20, 0x62, 0x72, 0x6f, 0x77, 0x6e, 0x20},
+				{ 0x10, 0x01, 0x0a, 0x10, 0x66, 0x6f, 0x78, 0x20, 0x6a, 0x75, 0x6d, 0x70, 0x73, 0x20, 0x6f, 0x76, 0x65, 0x72, 0x20, 0x74},
+				{ 0x10, 0x01, 0x0a, 0xc, 0x68, 0x65, 0x20, 0x6c, 0x61, 0x7a, 0x79, 0x20, 0x64, 0x6f, 0x67, 0x0a, 0xff, 0xff, 0xff, 0xff}
+		};
+		uint8_t eRxResp[20] = { 0x20, 0x01, 0x0a, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+		for(int i = 0; i < 3; ++i){
+			uint8_t pRxData[20] = { 0 };
+			HAL_SPI_Init(&hspi1);
+			HAL_SPI_TransmitReceive(&hspi1, &pTxData[i][0], pRxData, 20, 100);
+			HAL_SPI_DeInit(&hspi1);
+			if( memcmp(eRxResp, pRxData, sizeof(eRxResp)) != 0 ){
+				HAL_UART_Transmit(&huart1, pRxData, sizeof(pRxData), 100);
+			}
+			osDelay(50);
+		}
+		osDelay(500);
 	}
-	/* USER CODE END StartSpiTask */
+	/* USER CODE END StartBleTask */
 }
 
 /**
