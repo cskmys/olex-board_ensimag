@@ -183,9 +183,8 @@ void printSensorErr( void ) {
 	printAccErr();
 	printGyroErr();
 }
-
+Reading rpy;
 void printRollPitchYaw( void ) {
-	Reading rpy;
 	getRollPitchYaw(&rpy);
 	dbgPrintf("RPY: %d %d %d\n", (int)rpy.x, (int)rpy.y, (int)rpy.z);
 }
@@ -566,7 +565,7 @@ void StartBleTask(void *argument)
 //			sendBlePkt(&pTxData[i][0], eRxResp);
 //			osDelay(50);
 //		}
-		blePrintf("RPY: +123 +456 +789\n");
+		blePrintf("RPY: %d %d %d\n", (int)rpy.x, (int)rpy.y, (int)rpy.z);
 		osDelay(500);
 	}
 	/* USER CODE END StartBleTask */
