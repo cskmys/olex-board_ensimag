@@ -23,7 +23,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include<stdio.h>
 #include<string.h>
+#include<math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,6 +47,36 @@
 #define WAKEUP_REG_VAL 0x00
 #define ACC_REG_ADD 0x3b
 #define GYRO_REG_ADD 0x43
+#define ACC_SEN_CFG_REG 0x1c
+#define ACC_SEN_FULL_SCALE_CFG_VAL 0x10
+#define GYRO_SEN_CFG_REG 0x1b
+#define GYRO_SEN_FULL_SCALE_VAL_REG 0x10
+
+// According to the datasheet
+#define ACC_2G_DIV_CONST 16384.0 // For +-2g range, divide raw values by 16384
+#define ACC_4G_DIV_CONST 8192.0
+#define ACC_8G_DIV_CONST 4096.0
+#define ACC_16G_DIV_CONST 2048.0
+
+#define GYRO_250DPS_DIV_CONST 131.0 // For 250deg/s range, divide raw value by 131.0
+#define GYRO_500DPS_DIV_CONST 65.5
+#define GYRO_1000DPS_DIV_CONST 32.8
+#define GYRO_2000DPS_DIV_CONST 16.4
+
+#define PI 3.14
+#define NB_EXPERIMENTS 200
+
+// yet to be determined properly via experimentation
+#define ACC_X_ERR (+1.472944)
+#define ACC_Y_ERR (-3.946817)
+
+#define GYRO_X_ERR (-1.105988)
+#define GYRO_Y_ERR (-0.717590)
+#define GYRO_Z_ERR (-0.481207)
+
+#define DRIFT 0.04 // 4%
+#define ACC_DRIFT DRIFT
+#define GYRO_DRIFT (1.00 - ACC_DRIFT)
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -67,6 +99,137 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void cfgSensorFullScale() {
+#ifdef FULL_SCALE_CFG_CODE
+	// IN CASE YOU UNCOMMENT THIS, MAKE SURE TO CHANGE ALL THE DIVISIBILITY VALUES AS PER THE DATASHEET FOR FULL SCALE
+	// Configure Accelerometer Sensitivity - +/- 8g i,e, Full Scale Range. (default +/- 2g)
+	// Reg 0x1C -> 0x10:
+	uint_8 accFullScaleCfgVal = ACC_SEN_FULL_SCALE_CFG_VAL;
+	HAL_I2C_Mem_Write(&hi2c1, I2C_SLAVE_ADD, ACC_SEN_CFG_REG, I2C_REG_ADD_SIZ, &accFullScaleCfgVal, sizeof(accFullScaleCfgVal), 100);
+
+	// Configure Gyro Sensitivity - 1000deg/s i,e, Full Scale Range (default +/- 250deg/s)
+	// Reg 0x1B -> 0x10;
+	uint_8 gyroFullScaleCfgVal = GYRO_SEN_FULL_SCALE_VAL_REG;
+	HAL_I2C_Mem_Write(&hi2c1, I2C_SLAVE_ADD, GYRO_SEN_CFG_REG, I2C_REG_ADD_SIZ, &gyroFullScaleCfgVal, sizeof(gyroFullScaleCfgVal), 100);
+	delay(20);
+#endif
+}
+
+int normalizeDegrees(float angle){
+	int retDeg = ((int)angle) % 360;
+	if(retDeg < 0){
+		retDeg += 360;
+	}
+	return retDeg;
+}
+
+int decode2sCompliment(uint16_t val){
+	return (int)( 0x8000 & val ? (int)( 0x7FFF & val ) - 0x8000 : val );
+}
+
+void calSensorErr( void ) {
+	// The error values used in the equations are calculated here
+	// PLACE SENSOR FLAT INORDER TO GET PROPER VALUES
+	float accErrorX = 0.0;
+	float accErrorY = 0.0;
+	for (int i = 0; i < NB_EXPERIMENTS; ++i) {
+		uint8_t accVal[6];
+		memset(accVal, 0xff, sizeof(accVal));
+		HAL_I2C_Mem_Read(&hi2c1, I2C_SLAVE_ADD, ACC_REG_ADD, I2C_REG_ADD_SIZ, accVal, sizeof(accVal), 100);
+
+		float accX = (float)decode2sCompliment(accVal[0] << 8 | accVal[1]) / ACC_2G_DIV_CONST;
+		float accY = (float)decode2sCompliment(accVal[2] << 8 | accVal[3]) / ACC_2G_DIV_CONST;
+		float accZ = (float)decode2sCompliment(accVal[4] << 8 | accVal[5]) / ACC_2G_DIV_CONST;
+		// Sum all readings
+		accErrorX = accErrorX + ((atan((accY) / sqrt(pow((accX), 2) + pow((accZ), 2))) * 180 / PI));
+		accErrorY = accErrorY + ((atan(-1 * (accX) / sqrt(pow((accY), 2) + pow((accZ), 2))) * 180 / PI));
+	}
+	//Divide the sum by NB_EXPERIMENTS to get the error value
+	accErrorX = accErrorX / NB_EXPERIMENTS;
+	accErrorY = accErrorY / NB_EXPERIMENTS;
+
+	float gyroErrorX = 0.0;
+	float gyroErrorY = 0.0;
+	float gyroErrorZ = 0.0;
+
+	for (int i = 0; i < NB_EXPERIMENTS; ++i) {
+		uint8_t gyroVal[6];
+		memset(gyroVal, 0xff, sizeof(gyroVal));
+		HAL_I2C_Mem_Read(&hi2c1, I2C_SLAVE_ADD, GYRO_REG_ADD, I2C_REG_ADD_SIZ, gyroVal, sizeof(gyroVal), 100);
+
+		float gyroX = (float)decode2sCompliment(gyroVal[0] << 8 | gyroVal[1]);
+		float gyroY = (float)decode2sCompliment(gyroVal[2] << 8 | gyroVal[3]);
+		float gyroZ = (float)decode2sCompliment(gyroVal[4] << 8 | gyroVal[5]);
+		// Sum all readings
+		gyroErrorX = gyroErrorX + (gyroX / GYRO_250DPS_DIV_CONST);
+		gyroErrorY = gyroErrorY + (gyroY / GYRO_250DPS_DIV_CONST);
+		gyroErrorZ = gyroErrorZ + (gyroZ / GYRO_250DPS_DIV_CONST);
+	}
+	//Divide the sum by NB_EXPERIMENTS to get the error value
+	gyroErrorX = gyroErrorX / NB_EXPERIMENTS;
+	gyroErrorY = gyroErrorY / NB_EXPERIMENTS;
+	gyroErrorZ = gyroErrorZ / NB_EXPERIMENTS;
+
+	// Print AccErrXY
+	char printStr[64] = {0};
+	snprintf(printStr, sizeof(printStr), "AccErrXY: %f %f\n", accErrorX, accErrorY);
+	HAL_UART_Transmit(&huart1, (uint8_t*)printStr, strlen(printStr), 100);
+	// Print GyroErrXYZ
+	snprintf(printStr, sizeof(printStr), "GyroErrXYZ: %f %f %f\n", gyroErrorX, gyroErrorY, gyroErrorZ);
+	HAL_UART_Transmit(&huart1, (uint8_t*)printStr, strlen(printStr), 100);
+}
+
+void printSensorErr( void ){
+	// Make sure sensor is perfectly flat
+	calSensorErr();
+	HAL_Delay(20);
+}
+
+
+void printSensorVal( void ) {
+	uint8_t accVal[6];
+	memset(accVal, 0xff, sizeof(accVal));
+	HAL_I2C_Mem_Read(&hi2c1, I2C_SLAVE_ADD, ACC_REG_ADD, I2C_REG_ADD_SIZ, accVal, sizeof(accVal), 100);
+
+	float accX = (float)decode2sCompliment(accVal[0] << 8 | accVal[1]) / ACC_2G_DIV_CONST;
+	float accY = (float)decode2sCompliment(accVal[2] << 8 | accVal[3]) / ACC_2G_DIV_CONST;
+	float accZ = (float)decode2sCompliment(accVal[4] << 8 | accVal[5]) / ACC_2G_DIV_CONST;
+	// Calculating Roll and Pitch from the accelerometer data
+	float accAngleX = (atan(accY / sqrt(pow(accX, 2) + pow(accZ, 2))) * 180 / PI) - ACC_X_ERR; // See the calSensorErr() for more details
+	float accAngleY = (atan(-1 * accX / sqrt(pow(accY, 2) + pow(accZ, 2))) * 180 / PI) - ACC_Y_ERR;
+
+	static float prevTim = 0; // tick is in ms
+	float curTim = HAL_GetTick();
+	float elapsedTime = (curTim - prevTim) / 1000; // /1000 to get seconds
+	prevTim = curTim;
+
+	uint8_t gyroVal[6];
+	memset(gyroVal, 0xff, sizeof(gyroVal));
+	HAL_I2C_Mem_Read(&hi2c1, I2C_SLAVE_ADD, GYRO_REG_ADD, I2C_REG_ADD_SIZ, gyroVal, sizeof(gyroVal), 100);
+	float gyroX = (float)decode2sCompliment(gyroVal[0] << 8 | gyroVal[1]) / GYRO_250DPS_DIV_CONST;
+	float gyroY = (float)decode2sCompliment(gyroVal[2] << 8 | gyroVal[3]) / GYRO_250DPS_DIV_CONST;
+	float gyroZ = (float)decode2sCompliment(gyroVal[4] << 8 | gyroVal[5]) / GYRO_250DPS_DIV_CONST;
+
+	gyroX = gyroX - GYRO_X_ERR;
+	gyroY = gyroY - GYRO_Y_ERR;
+	gyroZ = gyroZ - GYRO_Z_ERR;
+
+	// raw values are in deg/s, so // deg/s * s = deg
+	static float gyroAngleX = 0.0;
+	static float gyroAngleY = 0.0;
+	static float gyroAngleZ = 0.0;
+	gyroAngleX = gyroAngleX + gyroX * elapsedTime; // integrating angular velocity over time to get angle
+	gyroAngleY = gyroAngleY + gyroY * elapsedTime;
+	gyroAngleZ = gyroAngleZ + gyroZ * elapsedTime;
+	int yaw = gyroAngleZ;
+	// Complementary filter - combine acceleromter and gyro angle values
+	int roll = GYRO_DRIFT * gyroAngleX + ACC_DRIFT * accAngleX;
+	int pitch = GYRO_DRIFT * gyroAngleY + ACC_DRIFT * accAngleY;
+
+	char printStr[64] = {0};
+	snprintf(printStr, sizeof(printStr), "RPY: %d %d %d\n", roll, pitch, yaw);
+	HAL_UART_Transmit(&huart1, (uint8_t*)printStr, strlen(printStr), 100);
+}
 
 /* USER CODE END 0 */
 
@@ -106,18 +269,28 @@ int main(void)
 	if( whoAmI != WHO_AM_I_REG_VAL ){
 		char whoAmIStr[6] = {0, 0, 0, 0, 0, 0};
 		snprintf(whoAmIStr, sizeof(whoAmIStr), "0x%x\n", whoAmI);
-		HAL_UART_Transmit(&huart1, whoAmIStr, strlen(whoAmIStr), 100);
+		HAL_UART_Transmit(&huart1, (uint8_t*)whoAmIStr, strlen(whoAmIStr), 100);
 	}
 
 	uint8_t wakeUp = WAKEUP_REG_VAL;
 	if( HAL_OK != HAL_I2C_Mem_Write(&hi2c1, I2C_SLAVE_ADD, WAKEUP_REG_ADD, I2C_REG_ADD_SIZ, &wakeUp, sizeof(wakeUp), 100) ){
 		char errMsg[32];
-		snprintf(errMsg, sizeof(errMsg), "screwed\n", errMsg);
-		HAL_UART_Transmit(&huart1, errMsg, strlen(errMsg), 100);
+		snprintf(errMsg, sizeof(errMsg), "screwed\n");
+		HAL_UART_Transmit(&huart1, (uint8_t*)errMsg, strlen(errMsg), 100);
 		HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, GPIO_PIN_SET);
 		while(1);
 	}
+
+	uint8_t accCfg = 0xff;
+	HAL_I2C_Mem_Read(&hi2c1, I2C_SLAVE_ADD, ACC_SEN_CFG_REG, I2C_REG_ADD_SIZ, &accCfg, sizeof(accCfg), 100);
+	uint8_t gyroCfg = 0xff;
+	HAL_I2C_Mem_Read(&hi2c1, I2C_SLAVE_ADD, GYRO_SEN_CFG_REG, I2C_REG_ADD_SIZ, &gyroCfg, sizeof(gyroCfg), 100);
+	char cfgStr[12] = {0};
+	snprintf(cfgStr, sizeof(cfgStr), "0x%x 0x%x\n", accCfg, gyroCfg);
+	HAL_UART_Transmit(&huart1, (uint8_t*)cfgStr, strlen(cfgStr), 100);
+
+	printSensorErr();
 
 	/* USER CODE END 2 */
 
@@ -128,21 +301,8 @@ int main(void)
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
-		uint8_t accVal[6];
-		memset(accVal, 0xff, sizeof(accVal));
-		HAL_I2C_Mem_Read(&hi2c1, I2C_SLAVE_ADD, ACC_REG_ADD, I2C_REG_ADD_SIZ, &accVal, sizeof(accVal), 100);
-		char accValStr[32] = {0};
-		snprintf(accValStr, sizeof(accValStr), "0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n", accVal[0], accVal[1], accVal[2], accVal[3], accVal[4], accVal[5]);
-		HAL_UART_Transmit(&huart1, accValStr, strlen(accValStr), 100);
-
-		uint8_t gyroVal[6];
-		memset(gyroVal, 0xff, sizeof(gyroVal));
-		HAL_I2C_Mem_Read(&hi2c1, I2C_SLAVE_ADD, GYRO_REG_ADD, I2C_REG_ADD_SIZ, &gyroVal, sizeof(gyroVal), 100);
-		char gyroValStr[32] = {0};
-		snprintf(gyroValStr, sizeof(gyroValStr), "0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n", gyroVal[0], gyroVal[1], gyroVal[2], gyroVal[3], gyroVal[4], gyroVal[5]);
-		HAL_UART_Transmit(&huart1, gyroValStr, strlen(gyroValStr), 100);
-
-		HAL_Delay(1000);
+		printSensorVal();
+		HAL_Delay(50);
 	}
 	/* USER CODE END 3 */
 }
@@ -288,6 +448,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
 
 /* USER CODE END 4 */
 
