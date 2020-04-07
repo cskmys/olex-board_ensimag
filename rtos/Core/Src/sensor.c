@@ -7,6 +7,8 @@
 
 #include "main.h"
 #include "sensor.h"
+#include "gpio.h"
+#include "utils.h"
 
 #include<math.h>
 
@@ -51,47 +53,50 @@
 
 extern I2C_HandleTypeDef hi2c1;
 
-void sensorRegRd(uint8_t regAddr, uint8_t *buff, uint8_t nbReg){
-	if( HAL_I2C_Mem_Read(&hi2c1, I2C_SLAVE_ADD, regAddr, I2C_REG_ADD_SIZ, buff, nbReg, 100) != HAL_OK ){
+void sensorRegRd(uint8_t regAddr, uint8_t *buff, uint8_t nbReg) {
+	if (HAL_I2C_Mem_Read(&hi2c1, I2C_SLAVE_ADD, regAddr, I2C_REG_ADD_SIZ, buff,
+			nbReg, 100) != HAL_OK) {
 		Error_Handler();
 	}
+	toggleSensorStatusLed();
 }
-void sensorRegWr(uint8_t regAddr, uint8_t *buff, uint8_t nbReg){
-	if( HAL_I2C_Mem_Write(&hi2c1, I2C_SLAVE_ADD, regAddr, I2C_REG_ADD_SIZ, buff, nbReg, 100) != HAL_OK ){
+void sensorRegWr(uint8_t regAddr, uint8_t *buff, uint8_t nbReg) {
+	if (HAL_I2C_Mem_Write(&hi2c1, I2C_SLAVE_ADD, regAddr, I2C_REG_ADD_SIZ, buff,
+			nbReg, 100) != HAL_OK) {
 		Error_Handler();
 	}
+	toggleSensorStatusLed();
 }
 
-void chkSensor( void ){
+void chkSensor(void) {
 	uint8_t whoAmI = 0;
 	sensorRegRd(WHO_AM_I_REG_ADD, &whoAmI, sizeof(whoAmI));
-	if( whoAmI != WHO_AM_I_REG_VAL ){
+	if (whoAmI != WHO_AM_I_REG_VAL) {
 		Error_Handler();
 	}
 }
 
-void wakeSensor( void ){
+void wakeSensor(void) {
 	uint8_t wakeUp = WAKEUP_REG_VAL;
 	sensorRegWr(WAKEUP_REG_ADD, &wakeUp, sizeof(wakeUp));
 }
 
-int getAccCfg( void ){
+int getAccCfg(void) {
 	uint8_t accCfg = 0xff;
 	sensorRegRd(ACC_SEN_CFG_REG, &accCfg, sizeof(accCfg));
 	return accCfg;
 }
 
-int getGyroCfg( void ){
+int getGyroCfg(void) {
 	uint8_t gyroCfg = 0xff;
 	sensorRegRd(GYRO_SEN_CFG_REG, &gyroCfg, sizeof(gyroCfg));
 	return gyroCfg;
 }
 
-void initSensor( void ){
+void initSensor(void) {
 	chkSensor();
 	wakeSensor();
 }
-
 
 /* USER CODE BEGIN 0 */
 void cfgSensorFullScale() {
@@ -109,27 +114,19 @@ void cfgSensorFullScale() {
 #endif
 }
 
-int decode2sCompliment(uint16_t val){
-	return (int)( 0x8000 & val ? (int)( 0x7FFF & val ) - 0x8000 : val );
-}
-
-uint16_t concatBytes(uint8_t msbByte, uint8_t lsbByte){
-	return (uint16_t)(msbByte << 8 | lsbByte);
-}
-
-int mkSensorReading(uint8_t msbByte, uint8_t lsbByte){
+int mkSensorReading(uint8_t msbByte, uint8_t lsbByte) {
 	return decode2sCompliment(concatBytes(msbByte, lsbByte));
 }
 
-float mkAccReading(uint8_t msbByte, uint8_t lsbByte){
-	return (float)mkSensorReading(msbByte, lsbByte) / ACC_2G_DIV_CONST;
+float mkAccReading(uint8_t msbByte, uint8_t lsbByte) {
+	return (float) mkSensorReading(msbByte, lsbByte) / ACC_2G_DIV_CONST;
 }
 
-float mkGyroReading(uint8_t msbByte, uint8_t lsbByte){
-	return (float)mkSensorReading(msbByte, lsbByte) / GYRO_250DPS_DIV_CONST;
+float mkGyroReading(uint8_t msbByte, uint8_t lsbByte) {
+	return (float) mkSensorReading(msbByte, lsbByte) / GYRO_250DPS_DIV_CONST;
 }
 
-void getAccReading( Reading *acc ){
+void getAccReading(Reading *acc) {
 	uint8_t accVal[6];
 	sensorRegRd(ACC_REG_ADD, accVal, sizeof(accVal));
 
@@ -139,7 +136,7 @@ void getAccReading( Reading *acc ){
 	return;
 }
 
-void getGyroReading( Reading *gyro ){
+void getGyroReading(Reading *gyro) {
 	uint8_t gyroVal[6];
 	sensorRegRd(GYRO_REG_ADD, gyroVal, sizeof(gyroVal));
 
@@ -149,7 +146,7 @@ void getGyroReading( Reading *gyro ){
 	return;
 }
 
-void getAccErr( Reading *accErr ){
+void getAccErr(Reading *accErr) {
 	// PLACE SENSOR FLAT INORDER TO GET PROPER VALUES
 	float accErrorX = 0.0;
 	float accErrorY = 0.0;
@@ -157,8 +154,12 @@ void getAccErr( Reading *accErr ){
 		Reading acc;
 		getAccReading(&acc);
 		// Sum all readings
-		accErrorX = accErrorX + ((atan((acc.y) / sqrt(pow((acc.x), 2) + pow((acc.z), 2))) * 180 / PI));
-		accErrorY = accErrorY + ((atan(-1 * (acc.x) / sqrt(pow((acc.y), 2) + pow((acc.z), 2))) * 180 / PI));
+		accErrorX = accErrorX
+				+ ((atan((acc.y) / sqrt(pow((acc.x), 2) + pow((acc.z), 2)))
+						* 180 / PI));
+		accErrorY = accErrorY
+				+ ((atan(-1 * (acc.x) / sqrt(pow((acc.y), 2) + pow((acc.z), 2)))
+						* 180 / PI));
 	}
 	//Divide the sum by NB_EXPERIMENTS to get the error value
 	accErr->x = accErrorX / NB_EXPERIMENTS;
@@ -166,7 +167,7 @@ void getAccErr( Reading *accErr ){
 	accErr->z = 0; // can't calculate z component with accelerometer
 }
 
-void getGyroErr( Reading *gyroErr ){
+void getGyroErr(Reading *gyroErr) {
 	float gyroErrorX = 0.0;
 	float gyroErrorY = 0.0;
 	float gyroErrorZ = 0.0;
@@ -184,20 +185,19 @@ void getGyroErr( Reading *gyroErr ){
 	gyroErr->z = gyroErrorZ / NB_EXPERIMENTS;
 }
 
-
-
-
-void getAccRollPitchYaw(Reading *rpy){
+void getAccRollPitchYaw(Reading *rpy) {
 	Reading acc;
 	getAccReading(&acc);
 
 	// Calculating Roll and Pitch from the accelerometer data
-	rpy->x = (atan(acc.y / sqrt(pow(acc.x, 2) + pow(acc.z, 2))) * 180 / PI) - ACC_X_ERR; // See the calSensorErr() for more details
-	rpy->y = (atan(-1 * acc.x / sqrt(pow(acc.y, 2) + pow(acc.z, 2))) * 180 / PI) - ACC_Y_ERR;
+	rpy->x = (atan(acc.y / sqrt(pow(acc.x, 2) + pow(acc.z, 2))) * 180 / PI)
+			- ACC_X_ERR; // See the calSensorErr() for more details
+	rpy->y = (atan(-1 * acc.x / sqrt(pow(acc.y, 2) + pow(acc.z, 2))) * 180 / PI)
+			- ACC_Y_ERR;
 	rpy->z = 0.0; // cant calculate with accelerometer
 }
 
-void getGyroRollPitchYaw(Reading *rpy){
+void getGyroRollPitchYaw(Reading *rpy) {
 	static float prevTim = 0; // tick is in ms
 	float curTim = HAL_GetTick();
 	float elapsedTime = (curTim - prevTim) / 1000; // /1000 to get seconds
@@ -205,7 +205,6 @@ void getGyroRollPitchYaw(Reading *rpy){
 
 	Reading gyro;
 	getGyroReading(&gyro);
-
 
 	gyro.x = gyro.x - GYRO_X_ERR;
 	gyro.y = gyro.y - GYRO_Y_ERR;
@@ -220,14 +219,15 @@ void getGyroRollPitchYaw(Reading *rpy){
 	rpy->z = gyroAngleZ = gyroAngleZ + gyro.z * elapsedTime;
 }
 
-void getDriftCorrectedRollPitchYaw(Reading accRpy, Reading gyroRpy, Reading *rpy){
+void getDriftCorrectedRollPitchYaw(Reading accRpy, Reading gyroRpy,
+		Reading *rpy) {
 	// Complementary filter - combine acceleromter and gyro angle values
 	rpy->x = GYRO_DRIFT * gyroRpy.x + ACC_DRIFT * accRpy.x;
 	rpy->z = GYRO_DRIFT * gyroRpy.y + ACC_DRIFT * accRpy.y;
 	rpy->z = gyroRpy.z; // since we cant calculate yaw in accelerometer
 }
 
-void getRollPitchYaw(Reading *rpy){
+void getRollPitchYaw(Reading *rpy) {
 	Reading accRpy;
 	getAccRollPitchYaw(&accRpy);
 
