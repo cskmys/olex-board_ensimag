@@ -1,9 +1,11 @@
 #include "utils.h"
 #include "main.h"
 #include "cmsis_os.h"
+#include "verinfo.h"
 #include<stdio.h>
 #include<stdarg.h>
 #include<string.h>
+
 
 static __inline uint32_t ITM_SendCharOnPort(uint8_t port, uint32_t ch) {
 	if (((ITM->TCR & ITM_TCR_ITMENA_Msk) != 0UL) && /* ITM enabled */
@@ -51,5 +53,9 @@ int decode2sCompliment(uint16_t val) {
 
 uint16_t concatBytes(uint8_t msbByte, uint8_t lsbByte) {
 	return (uint16_t) (msbByte << 8 | lsbByte);
+}
+
+void get32CharDevInfo(char *buff){
+	snprintf(buff, 32, "%s %s %s", PRJ_NAM, HW_VER, FW_VER);
 }
 

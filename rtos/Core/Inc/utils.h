@@ -14,5 +14,6 @@ extern void dbgPrintf(const char* fmt, ...);
 extern void dbgPrintBuff(uint8_t *buff, uint8_t nbEle);
 extern int decode2sCompliment(uint16_t val);
 extern uint16_t concatBytes(uint8_t msbByte, uint8_t lsbByte);
+extern void get32CharDevInfo(char *buff);
 
 #endif /* INC_UTILS_H_ */

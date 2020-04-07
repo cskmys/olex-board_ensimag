@@ -209,6 +209,33 @@ sudo dmesg
 * make sure you cross couple RX-TX to dev board and dont forget to have common GND
 * use macro *live monitor* to see the uart msgs
 
+=== ITM for debugging instead of UART printing
+
+* In .ioc > SYS > Debug > Trace Asynchronous Sw
+* In code use the function *ITM_SendChar(..)* to output one character
+* In Launch configuration > Debugger > Serial Wire Viewer > Enable 
++
+[NOTE]
+====
+Core Clock = 32 MHz & SWO = 2000 KHz for L100 Discovery board
+====
++
+[WARNING]
+====
+In case you dont know where to find it, you can delete .launch file and then rebuild code and then click debug.
+You should see the pop-up appear for configuration.
+====
+* Debug
+* Window > Show View > SMV > SMV Data Console
+* Configuration > Check Port 0 (but make sure everything else is unchecked)
+* Click the red button to start trace
++
+[WARNING]
+====
+If your program is running the red button will be disabled.
+Hence, make sure that your program is at halt under reset/breakpoint.
+====
+
 === SPI echo
 
 Not possible coz if you connect 2 bus pirates then voltage drops, all output obtained will be junk.

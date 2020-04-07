@@ -103,6 +103,12 @@ void bleTxSensorErr(void) {
 	blePrintf("GEXYZ: %d %d %d\n", (int) gErr.x, (int) gErr.y, (int) gErr.z);
 }
 
+void bleTxDevInfo(){
+	char verStr[32];
+	get32CharDevInfo(verStr);
+	blePrintf("%s\n", verStr);
+}
+
 void nullTask(void) {
 	for (;;) {
 		osDelay(1);
@@ -137,6 +143,7 @@ void bleTask(void) {
 	bleRst();
 	osDelay(1000);
 
+	bleTxDevInfo();
 	//	// DONT USE ANY OF THE APIS BELOW WITHOUT IMPLEMENTING SIGNAL SYNC MECHANISM
 	//	// IF YOU USE WITH SYNC MECHANISM, YOU CAN FIND YOURSELF IN DEADLOCK
 	//	// wait for sensor task signals
