@@ -10,7 +10,6 @@
 
 #include <stdint.h>
 
-extern void dbgPutc(char c);
 extern void dbgPrintf(const char* fmt, ...);
 extern void dbgPrintBuff(uint8_t *buff, uint8_t nbEle);
 extern int decode2sCompliment(uint16_t val);

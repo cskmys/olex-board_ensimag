@@ -223,7 +223,7 @@ void getDriftCorrectedRollPitchYaw(Reading accRpy, Reading gyroRpy,
 		Reading *rpy) {
 	// Complementary filter - combine acceleromter and gyro angle values
 	rpy->x = GYRO_DRIFT * gyroRpy.x + ACC_DRIFT * accRpy.x;
-	rpy->z = GYRO_DRIFT * gyroRpy.y + ACC_DRIFT * accRpy.y;
+	rpy->y = GYRO_DRIFT * gyroRpy.y + ACC_DRIFT * accRpy.y;
 	rpy->z = gyroRpy.z; // since we cant calculate yaw in accelerometer
 }
 
